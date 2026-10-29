@@ -37,13 +37,54 @@ final class Layout implements \JsonSerializable {
     /** @var array<string, mixed> Snapshot of non-node sub-node values and tracked attributes */
     private array $snapshot;
 
+    /** @var string Leading whitespace of the line the node starts on in the original source */
+    public string $indentation;
+
+    /** @var \WeakReference<Node>|null Node the laid out node was a child of when the layout was created */
+    private ?\WeakReference $parent = null;
+
+    /** @var Node|null Sentinel used as the parent of top-level nodes */
+    private static ?Node $topLevelParent = null;
+
     /**
      * @param list<Leaf|SubNodeRef> $children Leaves and sub-node references in source order
      * @param array<string, mixed> $snapshot Snapshot as created by takeSnapshot()
+     * @param string $indentation Leading whitespace of the line the node starts on. Used to
+     *                            re-indent the node when it is printed at a different indentation.
      */
-    public function __construct(array $children, array $snapshot = []) {
+    public function __construct(array $children, array $snapshot = [], string $indentation = '') {
         $this->children = $children;
         $this->snapshot = $snapshot;
+        $this->indentation = $indentation;
+    }
+
+    /**
+     * Returns the node the laid out node was a child of when the layout was created, if it is
+     * still alive. Used to determine whether a node is still at its original position.
+     */
+    public function getParent(): ?Node {
+        return $this->parent !== null ? $this->parent->get() : null;
+    }
+
+    public function setParent(?Node $parent): void {
+        $this->parent = $parent !== null ? \WeakReference::create($parent) : null;
+    }
+
+    /**
+     * Marks the laid out node as a top-level node (a node without parent) at the time the
+     * layout was created.
+     */
+    public function markTopLevel(): void {
+        self::$topLevelParent = self::$topLevelParent ?? new Node\Stmt\Nop();
+        $this->parent = \WeakReference::create(self::$topLevelParent);
+    }
+
+    /**
+     * Whether the laid out node was a top-level node when the layout was created.
+     */
+    public function isTopLevel(): bool {
+        return self::$topLevelParent !== null && $this->parent !== null
+            && $this->parent->get() === self::$topLevelParent;
     }
 
     /**
@@ -70,6 +111,11 @@ final class Layout implements \JsonSerializable {
     public static function takeSnapshot(Node $node, string $prefix = ''): array {
         $snapshot = [];
         foreach ($node->getSubNodeNames() as $name) {
+            if ($prefix !== '' && $name === 'name') {
+                // We don't track the name of anonymous classes, to allow consumers to assign
+                // unique names to anonymous classes for their own purposes.
+                continue;
+            }
             $value = $node->$name;
             if ($value instanceof Node) {
                 continue;
@@ -197,9 +243,12 @@ final class Layout implements \JsonSerializable {
     }
 
     /**
-     * @return array<string, true> Names of sub-nodes whose own sub-nodes are part of this layout
+     * Returns the names of sub-nodes whose own sub-nodes are part of this layout (the class of
+     * an anonymous class expression).
+     *
+     * @return array<string, true>
      */
-    private function getHoistedSubNodes(): array {
+    public function getHoistedSubNodes(): array {
         $hoisted = [];
         foreach ($this->children as $child) {
             if ($child instanceof SubNodeRef && \count($child->path) > 1) {
@@ -226,6 +275,9 @@ final class Layout implements \JsonSerializable {
             if ($value instanceof Node) {
                 if ($value instanceof Leaf) {
                     return false;
+                }
+                if ($prefix !== '' && $name === 'name') {
+                    continue;
                 }
                 if ($prefix === '' && isset($hoisted[$name])) {
                     if (!$this->allSubNodesReferenced($value, $name . '.', [], $referenced)) {
@@ -258,12 +310,13 @@ final class Layout implements \JsonSerializable {
         }
     }
 
-    /** @return array{nodeType: string, children: list<Leaf|SubNodeRef>, snapshot: array<string, mixed>} */
+    /** @return array{nodeType: string, children: list<Leaf|SubNodeRef>, snapshot: array<string, mixed>, indentation: string} */
     public function jsonSerialize(): array {
         return [
             'nodeType' => 'Layout',
             'children' => $this->children,
             'snapshot' => $this->snapshot,
+            'indentation' => $this->indentation,
         ];
     }
 }

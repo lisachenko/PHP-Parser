@@ -1,4 +1,4 @@
-Falling back to the pretty printer for modified nodes
+Repairing layouts and falling back to the pretty printer for modified nodes
 -----
 <?php
 class A {
@@ -10,14 +10,13 @@ class A {
     public $p;
 }
 -----
-// Changing a modifier invalidates the layout of the method, but not of its children.
+// Changing a modifier replaces the modifier tokens in the layout.
 $stmts[1]->stmts[0]->flags |= Modifiers::STATIC;
 -----
 <?php
 class A {
     /** Doc */
-    public static function f($x = [1,  2])
-    {
+    public static function  f($x = [1,  2]) {
         return   $x;
     }
 
@@ -31,13 +30,12 @@ class A {
     }
 }
 -----
-// Adding a previously missing sub-node.
+// Adding a previously missing sub-node inserts it into the layout.
 $stmts[1]->stmts[0]->returnType = new Node\Identifier('int');
 -----
 <?php
 class A {
-    public function f($x = [1,  2]): int
-    {
+    public   function  f($x = [1,  2]): int {
         return   $x;
     }
 }
@@ -47,12 +45,11 @@ function f(): int {
     return   1;
 }
 -----
-// Removing a sub-node.
+// Removing a sub-node removes it from the layout, together with its separator.
 $stmts[1]->returnType = null;
 -----
 <?php
-function f()
-{
+function f() {
     return   1;
 }
 -----

@@ -94,21 +94,37 @@ options (`indent`, `newline`, `phpVersion`, ...). Formatting is therefore only l
 when a node falls back to the pretty printer, its sub-nodes still use their own layouts, and the
 indentation of multi-line fallback output follows the surrounding code.
 
+Before falling back, the printer tries to *repair* the layout, i.e. to adjust the leaves to the
+modification, and stores the repaired layout on the node:
+
+ * Modifier changes (`flags` of classes, methods, properties, constants, parameters and
+   property hooks, `static` of closures) replace the modifier tokens.
+ * A sub-node that was `null` and is now a node (e.g. a return type, a default value, an
+   `extends` clause) is inserted together with the tokens it requires, and a sub-node that
+   became `null` is removed together with its tokens.
+ * Elements added to a previously empty list (e.g. parameters of a function without parameters,
+   arguments of `new Foo`) are inserted together with the required parentheses or keywords.
+
 A node falls back to the pretty printer when:
 
  * It has no layout at all (newly created nodes, or nodes the parser created without position
    information).
- * A non-node sub-node changed, e.g. the `flags` of a method or the `name` of a variable.
+ * A non-node sub-node changed in a way that cannot be repaired, e.g. the `name` of a variable
+   or the `value` of a literal.
  * A tracked attribute changed, e.g. the `kind` of an integer literal.
- * A sub-node that was `null` is now a node, or vice versa, e.g. a return type was added.
- * An array sub-node that was empty now contains nodes, e.g. a parameter was added to a
-   function without parameters. (Removing elements never causes a fallback.)
+ * A sub-node was added, removed or a list was filled for which no repair information exists.
 
-When a node is replaced by a node without layout, the lossless printer takes care of operator
-precedence (adding parentheses as needed) and of braces in `$obj->{$name}` and `"{$expr}"` in
-the same way as the formatting-preserving pretty printer does. When nodes are inserted into an
-array without leaves around them, a default separator is inserted (a comma for lists, a line
-break with the indentation of the previous element for statement lists).
+When a node is replaced by, or moved to a position with, a node that is not the original node
+at that position, the printer takes care of operator precedence (adding parentheses as needed)
+and of braces in `$obj->{$name}` and `"{$expr}"`. When a node is printed at a different
+indentation than in the original source (because it was moved, or because its parent falls back
+to the pretty printer), the line breaks inside the node are re-indented accordingly.
+
+When nodes are inserted into an array without leaves around them, a default separator is
+inserted: a comma for argument and item lists (followed by a line break if the list is formatted
+with one element per line), a line break with the current indentation for statement lists. The
+comments of such nodes (the `comments` attribute) are printed in front of them, unless they are
+already present as comment leaves.
 
 Modifying the tree
 ------------------
@@ -147,11 +163,42 @@ visitors to inspect and modify formatting. `Layout::withoutLeaves($array)` retur
 functional nodes of an array without the leaves, which is helpful when indexing into statement
 lists.
 
+Transferring layouts to a modified copy of the AST
+--------------------------------------------------
+
+The formatting-preserving printing mode (`printFormatPreserving()`, see the
+[pretty printing documentation](Pretty_printing.markdown#formatting-preserving-pretty-printing))
+uses layouts as well. It operates on a cloned AST whose nodes refer to the original nodes
+through the `origNode` attribute: the `LayoutTransferVisitor` annotates the original AST,
+copies the layout of each original node to its clone and diffs each node array of the clone
+against the original array, so that the leaves in front of unchanged elements are carried over.
+Added, replaced and moved elements are left without leaves (and are marked as not being at
+their original position), so that the printer inserts separators for them. This visitor can
+also be used on its own:
+
+```php
+<?php
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\CloningVisitor;
+use PhpParser\NodeVisitor\LayoutAnnotatingVisitor;
+use PhpParser\NodeVisitor\LayoutTransferVisitor;
+
+$origStmts = $parser->parse($code);
+// Clone before annotating: the clone must not carry leaves of its own.
+$stmts = (new NodeTraverser(new CloningVisitor()))->traverse($origStmts);
+// ... modify $stmts without caring about leaves ...
+$origStmts = LayoutAnnotatingVisitor::annotate($origStmts, $parser->getTokens());
+$stmts = (new NodeTraverser(new LayoutTransferVisitor($origStmts)))->traverse($stmts);
+```
+
+(Cloning an already annotated AST clones the layouts and leaves instead, so no transfer is
+required in that case; the leaves then have to be maintained when modifying the clone.)
+
 Interaction with other components
 ---------------------------------
 
- * The standard and formatting-preserving pretty printers ignore leaf nodes, so an annotated
-   AST can still be printed with them (the leaves are then simply not used).
+ * The standard pretty printer ignores leaf nodes, so an annotated AST can still be printed
+   with it (the leaves are then simply not used).
  * The `NameResolver`, the `ConstExprEvaluator`, the `NodeDumper` (which dumps the `layout`
    attribute when `dumpOtherAttributes` is enabled), the JSON encoding/decoding and the
    `CloningVisitor` (which clones the leaves, so the original and the clone can be modified

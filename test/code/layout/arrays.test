@@ -57,13 +57,11 @@ foo(
 <?php
 function f() {}
 -----
-// Adding elements to a previously empty array falls back to the pretty printer for the parent.
+// Adding elements to a previously empty array inserts the array into the layout.
 $stmts[1]->params[] = new Node\Param(new Expr\Variable('a'));
 -----
 <?php
-function f($a)
-{
-}
+function f($a) {}
 -----
 <?php
 echo "a $b c";

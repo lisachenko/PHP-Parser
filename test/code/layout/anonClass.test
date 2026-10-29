@@ -18,10 +18,19 @@ $o = new class($a, $b, $c) extends C {
 <?php
 $o = new class {};
 -----
-// Modifying the class declaration itself falls back to the pretty printer.
+// Modifiers of the class declaration are inserted into the layout.
 $stmts[1]->expr->expr->class->flags = Modifiers::READONLY;
 -----
 <?php
-$o = new readonly class
+$o = new readonly class {};
+-----
+<?php
+$o = new class {};
+-----
+// Changing something the layout cannot express falls back to the pretty printer.
+$stmts[1]->expr->expr->class->setAttribute('kind', 42);
+-----
+<?php
+$o = new class
 {
 };

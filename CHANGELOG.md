@@ -11,6 +11,22 @@ Version 5.10.0-dev
   falling back to the standard pretty printer for modified nodes. The standard pretty printer, the
   `NameResolver`, the `ConstExprEvaluator`, the `NodeDumper`, the `JsonDecoder` and the
   `CloningVisitor` ignore or support leaf nodes. See the lossless layout documentation for details.
+* Layouts of modified nodes are repaired where possible (modifier changes, added or removed
+  optional sub-nodes, elements added to empty lists), and nodes printed at a different indentation
+  are re-indented.
+
+### Changed
+
+* The formatting-preserving pretty printer (`printFormatPreserving()`) is now implemented on top of
+  lossless layouts: The original AST is annotated with layouts, which are transferred to the
+  modified AST by the new `LayoutTransferVisitor`, and the modified AST is printed from its layouts.
+  The public API is unchanged, but the original AST passed to `printFormatPreserving()` is now
+  annotated in place (its node arrays contain leaf nodes afterwards).
+
+### Removed
+
+* The internal `Internal\TokenStream` and `Internal\PrintableNewAnonClassNode` classes, which were
+  only used by the previous implementation of the formatting-preserving pretty printer.
 
 Version 5.9.0 (2026-09-13)
 --------------------------

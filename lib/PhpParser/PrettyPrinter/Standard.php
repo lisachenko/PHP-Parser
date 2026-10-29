@@ -1077,6 +1077,19 @@ class Standard extends PrettyPrinterAbstract {
     }
 
     /** @param (Expr|Node\InterpolatedStringPart)[] $encapsList */
+    protected function pLayoutStringPart(Node\InterpolatedStringPart $part, ?Node $owner): string {
+        // The escaping depends on the kind of the enclosing string.
+        $quote = '"';
+        if ($owner instanceof Expr\ShellExec) {
+            $quote = '`';
+        } elseif ($owner instanceof Scalar\InterpolatedString
+            && $owner->getAttribute('kind') === Scalar\String_::KIND_HEREDOC
+        ) {
+            $quote = null;
+        }
+        return $this->escapeString($part->value, $quote);
+    }
+
     protected function pEncapsList(array $encapsList, ?string $quote): string {
         $return = '';
         foreach ($encapsList as $element) {

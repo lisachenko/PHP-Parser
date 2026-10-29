@@ -47,7 +47,8 @@ class LayoutTest extends \PHPUnit\Framework\TestCase {
             'stmts' => [],
         ], Layout::takeSnapshot($method));
 
-        $this->assertSame(['class.attrGroups' => [], 'class.flags' => 0, 'class.name' => null], array_intersect_key(
+        // The name of anonymous classes is not tracked.
+        $this->assertSame(['class.attrGroups' => [], 'class.flags' => 0], array_intersect_key(
             Layout::takeSnapshot(new Stmt\Class_(null), 'class.'),
             ['class.attrGroups' => 1, 'class.flags' => 1, 'class.name' => 1]
         ));

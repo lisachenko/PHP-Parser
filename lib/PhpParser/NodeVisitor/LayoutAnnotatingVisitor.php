@@ -38,6 +38,12 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
     private int $lastTokenPos;
     /** @var \SplObjectStorage<Node, null> Nodes whose sub-nodes were hoisted into the parent layout */
     private \SplObjectStorage $hoisted;
+    /** @var \SplObjectStorage<Node, Node> Map from child nodes to the node owning them */
+    private \SplObjectStorage $parents;
+    /** @var string Source code, reconstructed from the tokens */
+    private string $code;
+    /** @var array<string, string> Cache of indentation strings, to share identical strings */
+    private array $indentations = [];
 
     /**
      * @param Token[] $tokens Token array of the parse, as returned by Parser::getTokens()
@@ -51,6 +57,12 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
             $this->lastTokenPos = $numTokens - 2;
         }
         $this->hoisted = new \SplObjectStorage();
+        $this->parents = new \SplObjectStorage();
+        $code = '';
+        for ($i = 0; $i <= $this->lastTokenPos; $i++) {
+            $code .= $tokens[$i]->text;
+        }
+        $this->code = $code;
     }
 
     /**
@@ -67,6 +79,7 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
 
     public function beforeTraverse(array $nodes) {
         $this->hoisted = new \SplObjectStorage();
+        $this->parents = new \SplObjectStorage();
         return $this->buildTopLevel($nodes);
     }
 
@@ -86,6 +99,7 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
 
     public function afterTraverse(array $nodes) {
         $this->hoisted = new \SplObjectStorage();
+        $this->parents = new \SplObjectStorage();
         return null;
     }
 
@@ -200,14 +214,30 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
             $snapshot += Layout::takeSnapshot($node->$hoistedName, $hoistedName . '.');
             $this->hoisted->attach($node->$hoistedName);
         }
-        return new Layout($children, $snapshot);
+
+        // Remember which node owns each child, so that the children can record their parent.
+        foreach ($items as $item) {
+            $owner = $node;
+            for ($i = 0, $n = \count($item['path']) - 1; $i < $n; $i++) {
+                $owner = $owner->{$item['path'][$i]};
+            }
+            $this->parents[$item['node']] = $owner;
+        }
+
+        $layout = new Layout($children, $snapshot, $this->getIndentation($start));
+        if ($this->parents->contains($node)) {
+            $layout->setParent($this->parents[$node]);
+        } else {
+            $layout->markTopLevel();
+        }
+        return $layout;
     }
 
     /**
      * Collects the positioned child nodes of a node.
      *
      * @param list<string> $prefix Path prefix for hoisted sub-nodes
-     * @return list<array{start: int, end: int, path: list<string>, index: int|null, ord: int}>|null
+     * @return list<array{start: int, end: int, path: list<string>, index: int|null, ord: int, node: Node}>|null
      *         Children or null if a child lacks position information
      */
     private function collectChildren(Node $node, array $prefix, ?string $hoistedName): ?array {
@@ -251,7 +281,7 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
 
     /**
      * @param list<string> $path
-     * @return array{start: int, end: int, path: list<string>, index: int|null, ord: int}|null
+     * @return array{start: int, end: int, path: list<string>, index: int|null, ord: int, node: Node}|null
      */
     private function createItem(Node $node, array $path, ?int $index, int $ord): ?array {
         if ($node instanceof Leaf) {
@@ -262,7 +292,23 @@ class LayoutAnnotatingVisitor extends NodeVisitorAbstract {
         if ($start < 0 || $end < $start - 1) {
             return null;
         }
-        return ['start' => $start, 'end' => $end, 'path' => $path, 'index' => $index, 'ord' => $ord];
+        return ['start' => $start, 'end' => $end, 'path' => $path, 'index' => $index, 'ord' => $ord, 'node' => $node];
+    }
+
+    /**
+     * Determines the leading whitespace of the line on which the token at the given position
+     * starts.
+     */
+    private function getIndentation(int $tokenPos): string {
+        $pos = $tokenPos <= $this->lastTokenPos ? $this->tokens[$tokenPos]->pos : \strlen($this->code);
+        $lineStart = $pos > 0 ? \strrpos($this->code, "\n", $pos - \strlen($this->code) - 1) : false;
+        $lineStart = $lineStart === false ? 0 : $lineStart + 1;
+        $end = $lineStart;
+        while ($end < $pos && ($this->code[$end] === ' ' || $this->code[$end] === "\t")) {
+            $end++;
+        }
+        $indentation = \substr($this->code, $lineStart, $end - $lineStart);
+        return $this->indentations[$indentation] ??= $indentation;
     }
 
     /**

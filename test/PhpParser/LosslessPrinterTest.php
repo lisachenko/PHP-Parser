@@ -175,7 +175,8 @@ CODE
         $this->assertStringContainsString('"nodeType": "SubNodeRef"', $json);
 
         $decoded = (new JsonDecoder())->decode($json);
-        $this->assertEquals($stmts, $decoded);
+        $dumper = new NodeDumper(['dumpOtherAttributes' => true]);
+        $this->assertSame($dumper->dump($stmts), $dumper->dump($decoded));
         $this->assertSame($code, (new Lossless())->prettyPrintFile($decoded));
     }
 

@@ -98,7 +98,11 @@ class JsonDecoder {
         if (!\is_array($snapshot)) {
             throw new \RuntimeException('Layout snapshot must be an array');
         }
-        return new Layout($this->decodeArray($value['children']), $snapshot);
+        $indentation = $value['indentation'] ?? '';
+        if (!\is_string($indentation)) {
+            throw new \RuntimeException('Layout indentation must be a string');
+        }
+        return new Layout($this->decodeArray($value['children']), $snapshot, $indentation);
     }
 
     private function decodeSubNodeRef(array $value): SubNodeRef {

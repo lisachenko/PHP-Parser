@@ -129,7 +129,7 @@ class LayoutAnnotatingVisitorTest extends \PHPUnit\Framework\TestCase {
         $this->assertNotNull(Layout::of($new->class->extends));
         $this->assertNotNull(Layout::of($new->class->stmts[0]));
         $snapshot = Layout::of($new)->getSnapshot();
-        $this->assertArrayHasKey('class.name', $snapshot);
+        $this->assertArrayNotHasKey('class.name', $snapshot);
         $this->assertArrayHasKey('class.flags', $snapshot);
     }
 
