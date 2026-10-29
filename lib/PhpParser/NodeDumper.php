@@ -2,6 +2,7 @@
 
 namespace PhpParser;
 
+use PhpParser\Layout\SubNodeRef;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\Include_;
 use PhpParser\Node\Expr\List_;
@@ -144,6 +145,15 @@ class NodeDumper {
             $this->res .= "$this->nl)";
         } elseif ($node instanceof Comment) {
             $this->res .= \str_replace("\n", $this->nl, $node->getReformattedText());
+        } elseif ($node instanceof Layout) {
+            $this->res .= 'Layout(';
+            foreach ($node->children as $key => $value) {
+                $this->res .= "$this->nl    " . $key . ': ';
+                $this->dumpRecursive($value);
+            }
+            $this->res .= "$this->nl)";
+        } elseif ($node instanceof SubNodeRef) {
+            $this->res .= 'SubNodeRef(' . $node->getKey() . ')';
         } elseif (\is_string($node)) {
             $this->res .= \str_replace("\n", $this->nl, $node);
         } elseif (\is_int($node) || \is_float($node)) {

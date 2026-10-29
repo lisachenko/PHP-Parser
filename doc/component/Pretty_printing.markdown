@@ -115,3 +115,7 @@ the AST and causing spurious changes to the pretty printed code. For more inform
 
 The formatting-preservation works on a best-effort basis and may sometimes reformat more code than
 necessary. If you encounter problems while using this functionality, please open an issue.
+
+An alternative to the formatting-preserving pretty printer, which stores whitespace and comments
+as nodes in the AST and does not require the original token stream for printing, is described in
+the [lossless layout](Lossless_layout.markdown) documentation.

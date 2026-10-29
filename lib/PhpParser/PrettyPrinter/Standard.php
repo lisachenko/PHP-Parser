@@ -52,6 +52,9 @@ class Standard extends PrettyPrinterAbstract {
     protected function pUnionType(Node\UnionType $node): string {
         $types = [];
         foreach ($node->types as $typeNode) {
+            if ($typeNode instanceof Node\Leaf) {
+                continue;
+            }
             if ($typeNode instanceof Node\IntersectionType) {
                 $types[] = '('. $this->p($typeNode) . ')';
                 continue;
@@ -186,9 +189,10 @@ class Standard extends PrettyPrinterAbstract {
             $label = $node->getAttribute('docLabel');
             if ($label && !$this->encapsedContainsEndLabel($node->parts, $label)) {
                 $nl = $this->phpVersion->supportsFlexibleHeredoc() ? $this->nl : $this->newline;
-                if (count($node->parts) === 1
-                    && $node->parts[0] instanceof Node\InterpolatedStringPart
-                    && $node->parts[0]->value === ''
+                $parts = $this->withoutLeaves($node->parts);
+                if (count($parts) === 1
+                    && $parts[0] instanceof Node\InterpolatedStringPart
+                    && $parts[0]->value === ''
                 ) {
                     return "<<<$label$nl$label{$this->docStringEndToken}";
                 }
@@ -692,11 +696,12 @@ class Standard extends PrettyPrinterAbstract {
 
     protected function pMatchArm(Node\MatchArm $node): string {
         $result = '';
-        if ($node->conds) {
-            for ($i = 0, $c = \count($node->conds); $i + 1 < $c; $i++) {
-                $result .= $this->p($node->conds[$i]) . ', ';
+        $conds = $node->conds !== null ? $this->withoutLeaves($node->conds) : null;
+        if ($conds) {
+            for ($i = 0, $c = \count($conds); $i + 1 < $c; $i++) {
+                $result .= $this->p($conds[$i]) . ', ';
             }
-            $result .= $this->pKey($node->conds[$i]);
+            $result .= $this->pKey($conds[$i]);
         } else {
             $result = 'default => ';
         }
@@ -928,9 +933,10 @@ class Standard extends PrettyPrinterAbstract {
     }
 
     protected function pStmt_Else(Stmt\Else_ $node): string {
-        if (\count($node->stmts) === 1 && $node->stmts[0] instanceof Stmt\If_) {
+        $stmts = $this->withoutLeaves($node->stmts);
+        if (\count($stmts) === 1 && $stmts[0] instanceof Stmt\If_) {
             // Print as "else if" rather than "else { if }"
-            return 'else ' . $this->p($node->stmts[0]);
+            return 'else ' . $this->p($stmts[0]);
         }
         return 'else {' . $this->pStmts($node->stmts) . $this->nl . '}';
     }
@@ -1074,6 +1080,9 @@ class Standard extends PrettyPrinterAbstract {
     protected function pEncapsList(array $encapsList, ?string $quote): string {
         $return = '';
         foreach ($encapsList as $element) {
+            if ($element instanceof Node\Leaf) {
+                continue;
+            }
             if ($element instanceof Node\InterpolatedStringPart) {
                 $return .= $this->escapeString($element->value, $quote);
             } else {
@@ -1206,7 +1215,7 @@ class Standard extends PrettyPrinterAbstract {
      */
     private function hasParamWithAttributes(array $params): bool {
         foreach ($params as $param) {
-            if ($param->attrGroups) {
+            if ($param instanceof Node\Param && $param->attrGroups) {
                 return true;
             }
         }
@@ -1228,6 +1237,9 @@ class Standard extends PrettyPrinterAbstract {
         $result = '';
         $sep = $inline ? ' ' : $this->nl;
         foreach ($nodes as $node) {
+            if ($node instanceof Node\Leaf) {
+                continue;
+            }
             $result .= $this->p($node) . $sep;
         }
 

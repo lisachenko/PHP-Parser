@@ -1,0 +1,27 @@
+Anonymous classes
+-----
+<?php
+$o = new class($a, $b) extends B {
+    public function m() {}
+};
+-----
+$stmts[1]->expr->expr->args[] = new Node\Arg(new Expr\Variable('c'));
+$stmts[1]->expr->expr->class->extends = new Node\Name('C');
+$stmts[1]->expr->expr->class->stmts[] = new Stmt\Property(Modifiers::PUBLIC, [new Node\PropertyItem('p')]);
+-----
+<?php
+$o = new class($a, $b, $c) extends C {
+    public function m() {}
+    public $p;
+};
+-----
+<?php
+$o = new class {};
+-----
+// Modifying the class declaration itself falls back to the pretty printer.
+$stmts[1]->expr->expr->class->flags = Modifiers::READONLY;
+-----
+<?php
+$o = new readonly class
+{
+};

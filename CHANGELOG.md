@@ -1,3 +1,17 @@
+Version 5.10.0-dev
+------------------
+
+### Added
+
+* Added lossless layouts, an opt-in representation that stores whitespace, comments and syntactic
+  tokens as leaf nodes (`Node\Leaf\Whitespace`, `Node\Leaf\Comment`, `Node\Leaf\Token`) in the AST,
+  similar to the PSI trees used by IntelliJ. The `LayoutAnnotatingVisitor` attaches a `layout`
+  attribute (`PhpParser\Layout`) to every node and stores leaves in-between the elements of node
+  arrays, and the `PrettyPrinter\Lossless` printer reconstructs the source code from the tree alone,
+  falling back to the standard pretty printer for modified nodes. The standard pretty printer, the
+  `NameResolver`, the `ConstExprEvaluator`, the `NodeDumper`, the `JsonDecoder` and the
+  `CloningVisitor` ignore or support leaf nodes. See the lossless layout documentation for details.
+
 Version 5.9.0 (2026-09-13)
 --------------------------
 

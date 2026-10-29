@@ -1,0 +1,55 @@
+Replaced nodes are wrapped in parentheses or braces as necessary
+-----
+<?php
+$x = $a * $b;
+$y = $a * ($b);
+-----
+$stmts[1]->expr->expr->right = new Expr\BinaryOp\Plus(new Expr\Variable('b'), new Expr\Variable('c'));
+$stmts[3]->expr->expr->right = new Expr\BinaryOp\Plus(new Expr\Variable('b'), new Expr\Variable('c'));
+-----
+<?php
+$x = $a * ($b + $c);
+$y = $a * ($b + $c);
+-----
+<?php
+$x = $a + $b * $c;
+-----
+// Replacing the whole expression: the layout of the operands is still used.
+$stmts[1]->expr->expr = new Expr\BinaryOp\Mul($stmts[1]->expr->expr, new Expr\Variable('d'));
+-----
+<?php
+$x = ($a + $b * $c) * $d;
+-----
+<?php
+foo();
+$o->p;
+A::$p;
+new A;
+$a instanceof B;
+"a $b";
+-----
+$stmts[1]->expr->name = new Expr\BinaryOp\Concat(new Expr\Variable('a'), new Expr\Variable('b'));
+$stmts[3]->expr->name = new Expr\Variable('n');
+$stmts[5]->expr->name = new Expr\Variable('n');
+$stmts[7]->expr->class = new Expr\BinaryOp\Concat(new Expr\Variable('a'), new Expr\Variable('b'));
+$stmts[9]->expr->class = new Expr\BinaryOp\Concat(new Expr\Variable('a'), new Expr\Variable('b'));
+$stmts[11]->expr->parts[1] = new Expr\PropertyFetch(new Expr\Variable('o'), 'p');
+-----
+<?php
+($a . $b)();
+$o->{$n};
+A::${$n};
+new ($a . $b);
+$a instanceof ($a . $b);
+"a {$o->p}";
+-----
+<?php
+$x = $a ? $b : $c;
+$y = -$a;
+-----
+$stmts[1]->expr->expr->cond = new Expr\Assign(new Expr\Variable('d'), new Expr\Variable('e'));
+$stmts[3]->expr->expr->expr = new Expr\BinaryOp\Plus(new Expr\Variable('b'), new Expr\Variable('c'));
+-----
+<?php
+$x = ($d = $e) ? $b : $c;
+$y = -($b + $c);

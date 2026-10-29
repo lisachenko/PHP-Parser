@@ -6,12 +6,14 @@ use PhpParser\Internal\DiffElem;
 use PhpParser\Internal\Differ;
 use PhpParser\Internal\PrintableNewAnonClassNode;
 use PhpParser\Internal\TokenStream;
+use PhpParser\Layout;
 use PhpParser\Node\AttributeGroup;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\AssignOp;
 use PhpParser\Node\Expr\BinaryOp;
 use PhpParser\Node\Expr\Cast;
 use PhpParser\Node\IntersectionType;
+use PhpParser\Node\Leaf;
 use PhpParser\Node\MatchArm;
 use PhpParser\Node\Param;
 use PhpParser\Node\PropertyHook;
@@ -116,7 +118,7 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
     /** @var bool Whether to use tab indentation. */
     private bool $useTabs;
     /** @var int Width in spaces of one tab. */
-    private int $tabWidth = 4;
+    protected int $tabWidth = 4;
 
     /** @var string Newline style. Does not include current indentation. */
     protected string $newline;
@@ -293,6 +295,7 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
      * @return string Pretty printed statements
      */
     public function prettyPrintFile(array $stmts): string {
+        $stmts = $this->withoutLeaves($stmts);
         if (!$stmts) {
             return "<?php" . $this->newline . $this->newline;
         }
@@ -356,6 +359,11 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
 
         $result = '';
         foreach ($nodes as $node) {
+            if ($node instanceof Leaf) {
+                // Leaves of lossless layouts are only printed by the lossless printer.
+                continue;
+            }
+
             $comments = $node->getComments();
             if ($comments) {
                 $result .= $this->nl . $this->pComments($comments);
@@ -469,6 +477,9 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
     protected function pImplode(array $nodes, string $glue = ''): string {
         $pNodes = [];
         foreach ($nodes as $node) {
+            if ($node instanceof Leaf) {
+                continue;
+            }
             if (null === $node) {
                 $pNodes[] = '';
             } else {
@@ -501,6 +512,7 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
      * @return string Comma separated pretty printed nodes in multiline style
      */
     protected function pCommaSeparatedMultiline(array $nodes, bool $trailingComma): string {
+        $nodes = $this->withoutLeaves($nodes);
         $this->indent();
 
         $result = '';
@@ -523,6 +535,17 @@ abstract class PrettyPrinterAbstract implements PrettyPrinter {
 
         $this->outdent();
         return $result;
+    }
+
+    /**
+     * Removes the leaf nodes of lossless layouts from an array of nodes.
+     *
+     * @template T of Node|null
+     * @param array<T> $nodes Array of nodes
+     * @return list<T> Nodes without leaves
+     */
+    protected function withoutLeaves(array $nodes): array {
+        return Layout::withoutLeaves($nodes);
     }
 
     /**

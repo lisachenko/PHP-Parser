@@ -24,6 +24,10 @@ Component documentation
     * Converting AST back to PHP code
     * Customizing formatting
     * Formatting-preserving code transformations
+  * [Lossless layout (whitespace nodes)](component/Lossless_layout.markdown)
+    * Leaf nodes for whitespace, comments and tokens
+    * Reconstructing source code from the AST alone
+    * Modifying formatting through the tree
   * [AST builders](component/AST_builders.markdown)
     * Fluent builders for AST nodes
   * [Lexer](component/Lexer.markdown)

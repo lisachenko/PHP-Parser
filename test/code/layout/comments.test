@@ -1,0 +1,48 @@
+Editing comment leaves
+-----
+<?php
+// Leading comment
+foo(); // trailing comment
+
+/**
+ * Doc comment
+ */
+function bar() {}
+-----
+// Comments are leaves and can be edited in place...
+$stmts[1]->text = '// Edited leading comment';
+// ...or removed, together with the whitespace separating them.
+array_splice($stmts, 4, 2);
+// A new comment is just a new leaf.
+array_splice($stmts, 5, 0, [new Leaf\Comment('/* inserted */'), new Leaf\Whitespace("\n")]);
+-----
+<?php
+// Edited leading comment
+foo();
+
+/* inserted */
+/**
+ * Doc comment
+ */
+function bar() {}
+-----
+<?php
+class A
+{
+    // a comment inside the class
+}
+-----
+// Comments inside an otherwise empty body are leaves of the enclosing layout, followed by a
+// zero-length nop statement.
+foreach (Layout::of($stmts[1])->children as $child) {
+    if ($child instanceof Leaf\Comment) {
+        $child->text = '// edited';
+    }
+}
+assert($stmts[1]->stmts[0] instanceof Stmt\Nop);
+-----
+<?php
+class A
+{
+    // edited
+}

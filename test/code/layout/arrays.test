@@ -1,0 +1,76 @@
+Modifying arrays with leaves in-between
+-----
+<?php
+foo($a,   $b);
+$x = [1, 2];
+-----
+// Elements appended without leaves get a default separator.
+$stmts[1]->expr->args[] = new Node\Arg(new Expr\Variable('c'));
+$stmts[3]->expr->expr->items[] = new Node\ArrayItem(new Scalar\Int_(3));
+-----
+<?php
+foo($a,   $b, $c);
+$x = [1, 2, 3];
+-----
+<?php
+foo($a,   $b);
+-----
+// Elements inserted together with leaves control the formatting exactly.
+array_splice($stmts[1]->expr->args, 1, 0, [new Leaf\Token(','), new Leaf\Whitespace("\n    "), new Node\Arg(new Expr\Variable('c'))]);
+-----
+<?php
+foo($a,
+    $c,   $b);
+-----
+<?php
+foo($a,   $b, $c);
+-----
+// Removing an element without its separator leaves the separator behind.
+unset($stmts[1]->expr->args[6]);
+-----
+<?php
+foo($a,   $b, );
+-----
+<?php
+foo($a,   $b, $c);
+-----
+// Removing an element with its separator.
+array_splice($stmts[1]->expr->args, 4, 3);
+-----
+<?php
+foo($a,   $b);
+-----
+<?php
+foo(
+    $a,
+    $b,
+);
+-----
+// Removing all elements keeps the leaves of the parent layout.
+$stmts[1]->expr->args = [];
+-----
+<?php
+foo(
+    ,
+);
+-----
+<?php
+function f() {}
+-----
+// Adding elements to a previously empty array falls back to the pretty printer for the parent.
+$stmts[1]->params[] = new Node\Param(new Expr\Variable('a'));
+-----
+<?php
+function f($a)
+{
+}
+-----
+<?php
+echo "a $b c";
+-----
+// Parts of interpolated strings are naturally adjacent and get no separator.
+$stmts[1]->exprs[0]->parts[] = new Node\InterpolatedStringPart('d');
+$stmts[1]->exprs[0]->parts[] = new Expr\Variable('e');
+-----
+<?php
+echo "a $b cd{$e}";
