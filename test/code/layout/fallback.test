@@ -1,0 +1,126 @@
+Repairing layouts and falling back to the pretty printer for modified nodes
+-----
+<?php
+class A {
+    /** Doc */
+    public   function  f($x = [1,  2]) {
+        return   $x;
+    }
+
+    public $p;
+}
+-----
+// Changing a modifier replaces the modifier tokens in the layout.
+$stmts[1]->stmts[0]->flags |= Modifiers::STATIC;
+-----
+<?php
+class A {
+    /** Doc */
+    public static function  f($x = [1,  2]) {
+        return   $x;
+    }
+
+    public $p;
+}
+-----
+<?php
+class A {
+    public   function  f($x = [1,  2]) {
+        return   $x;
+    }
+}
+-----
+// Adding a previously missing sub-node inserts it into the layout.
+$stmts[1]->stmts[0]->returnType = new Node\Identifier('int');
+-----
+<?php
+class A {
+    public   function  f($x = [1,  2]): int {
+        return   $x;
+    }
+}
+-----
+<?php
+function f(): int {
+    return   1;
+}
+-----
+// Removing a sub-node removes it from the layout, together with its separator.
+$stmts[1]->returnType = null;
+-----
+<?php
+function f() {
+    return   1;
+}
+-----
+<?php
+$x = [0x10,   'a'];
+-----
+// Changing a literal value only reprints the literal.
+$stmts[1]->expr->expr->items[0]->value->value = 17;
+-----
+<?php
+$x = [0x11,   'a'];
+-----
+<?php
+$x = [0x10,   'a'];
+-----
+// Changing a formatting attribute reprints the literal.
+$stmts[1]->expr->expr->items[0]->value->setAttribute('kind', Scalar\Int_::KIND_DEC);
+-----
+<?php
+$x = [16,   'a'];
+-----
+<?php
+$a   =   $b;
+-----
+// Changing a variable name reprints the variable.
+$stmts[1]->expr->var->name = 'c';
+-----
+<?php
+$c   =   $b;
+-----
+<?php
+foo(  $a  );
+-----
+// Replacing a node by a new node without layout.
+$stmts[1]->expr->args[0]->value = new Expr\MethodCall(new Expr\Variable('b'), 'c');
+-----
+<?php
+foo(  $b->c()  );
+-----
+<?php
+namespace Foo;
+
+use Bar;
+
+function f() {
+    return   1;
+}
+-----
+// Semicolon namespaces: the statements are stored inside the namespace node.
+$stmts[1]->stmts[2]->name = new Node\Identifier('g');
+-----
+<?php
+namespace Foo;
+
+use Bar;
+
+function g() {
+    return   1;
+}
+-----
+<?php
+$x = <<<EOT
+  a $b
+    c
+  EOT;
+-----
+// Heredocs are reproduced verbatim as long as they are not modified.
+$stmts[1]->expr->var = new Expr\Variable('y');
+-----
+<?php
+$y = <<<EOT
+  a $b
+    c
+  EOT;

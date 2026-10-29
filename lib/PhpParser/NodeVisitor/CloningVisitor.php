@@ -2,6 +2,7 @@
 
 namespace PhpParser\NodeVisitor;
 
+use PhpParser\Layout;
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
 
@@ -14,6 +15,10 @@ class CloningVisitor extends NodeVisitorAbstract {
     public function enterNode(Node $origNode) {
         $node = clone $origNode;
         $node->setAttribute('origNode', $origNode);
+        $layout = Layout::of($origNode);
+        if ($layout !== null) {
+            $node->setAttribute(Layout::ATTRIBUTE, clone $layout);
+        }
         return $node;
     }
 }

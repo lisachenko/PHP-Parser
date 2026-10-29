@@ -6,6 +6,7 @@ use PhpParser\ErrorHandler;
 use PhpParser\NameContext;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Leaf;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Stmt;
@@ -62,12 +63,18 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_Use':
                 assert($node instanceof Stmt\Use_);
                 foreach ($node->uses as $use) {
+                    if ($use instanceof Leaf) {
+                        continue;
+                    }
                     $this->addAlias($use, $node->type, null);
                 }
                 break;
             case 'Stmt_GroupUse':
                 assert($node instanceof Stmt\GroupUse);
                 foreach ($node->uses as $use) {
+                    if ($use instanceof Leaf) {
+                        continue;
+                    }
                     $this->addAlias($use, $node->type, $node->prefix);
                 }
                 break;
@@ -78,6 +85,9 @@ class NameResolver extends NodeVisitorAbstract {
                 }
 
                 foreach ($node->implements as &$interface) {
+                    if ($interface instanceof Leaf) {
+                        continue;
+                    }
                     $interface = $this->resolveClassName($interface);
                 }
 
@@ -91,6 +101,9 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_Interface':
                 assert($node instanceof Stmt\Interface_);
                 foreach ($node->extends as &$interface) {
+                    if ($interface instanceof Leaf) {
+                        continue;
+                    }
                     $interface = $this->resolveClassName($interface);
                 }
 
@@ -100,6 +113,9 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_Enum':
                 assert($node instanceof Stmt\Enum_);
                 foreach ($node->implements as &$interface) {
+                    if ($interface instanceof Leaf) {
+                        continue;
+                    }
                     $interface = $this->resolveClassName($interface);
                 }
 
@@ -136,6 +152,9 @@ class NameResolver extends NodeVisitorAbstract {
             case 'PropertyHook':
                 assert($node instanceof Node\PropertyHook);
                 foreach ($node->params as $param) {
+                    if ($param instanceof Leaf) {
+                        continue;
+                    }
                     $param->type = $this->resolveType($param->type);
                     $this->resolveAttrGroups($param);
                 }
@@ -144,6 +163,9 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_Const':
                 assert($node instanceof Stmt\Const_);
                 foreach ($node->consts as $const) {
+                    if ($const instanceof Leaf) {
+                        continue;
+                    }
                     $this->addNamespacedName($const);
                 }
                 $this->resolveAttrGroups($node);
@@ -176,6 +198,9 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_Catch':
                 assert($node instanceof Stmt\Catch_);
                 foreach ($node->types as &$type) {
+                    if ($type instanceof Leaf) {
+                        continue;
+                    }
                     $type = $this->resolveClassName($type);
                 }
                 break;
@@ -192,16 +217,25 @@ class NameResolver extends NodeVisitorAbstract {
             case 'Stmt_TraitUse':
                 assert($node instanceof Stmt\TraitUse);
                 foreach ($node->traits as &$trait) {
+                    if ($trait instanceof Leaf) {
+                        continue;
+                    }
                     $trait = $this->resolveClassName($trait);
                 }
 
                 foreach ($node->adaptations as $adaptation) {
+                    if ($adaptation instanceof Leaf) {
+                        continue;
+                    }
                     if (null !== $adaptation->trait) {
                         $adaptation->trait = $this->resolveClassName($adaptation->trait);
                     }
 
                     if ($adaptation instanceof Stmt\TraitUseAdaptation\Precedence) {
                         foreach ($adaptation->insteadof as &$insteadof) {
+                            if ($insteadof instanceof Leaf) {
+                                continue;
+                            }
                             $insteadof = $this->resolveClassName($insteadof);
                         }
                     }
@@ -227,6 +261,9 @@ class NameResolver extends NodeVisitorAbstract {
     /** @param Stmt\Function_|Stmt\ClassMethod|Expr\Closure|Expr\ArrowFunction $node */
     private function resolveSignature($node): void {
         foreach ($node->params as $param) {
+            if ($param instanceof Leaf) {
+                continue;
+            }
             $param->type = $this->resolveType($param->type);
             $this->resolveAttrGroups($param);
         }
@@ -248,6 +285,9 @@ class NameResolver extends NodeVisitorAbstract {
         }
         if ($node instanceof Node\UnionType || $node instanceof Node\IntersectionType) {
             foreach ($node->types as &$type) {
+                if ($type instanceof Leaf) {
+                    continue;
+                }
                 $type = $this->resolveType($type);
             }
             return $node;
@@ -305,7 +345,13 @@ class NameResolver extends NodeVisitorAbstract {
 
     protected function resolveAttrGroups(Node $node): void {
         foreach ($node->attrGroups as $attrGroup) {
+            if ($attrGroup instanceof Leaf) {
+                continue;
+            }
             foreach ($attrGroup->attrs as $attr) {
+                if ($attr instanceof Leaf) {
+                    continue;
+                }
                 $attr->name = $this->resolveClassName($attr->name);
             }
         }

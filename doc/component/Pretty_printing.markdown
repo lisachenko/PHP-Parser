@@ -115,3 +115,14 @@ the AST and causing spurious changes to the pretty printed code. For more inform
 
 The formatting-preservation works on a best-effort basis and may sometimes reformat more code than
 necessary. If you encounter problems while using this functionality, please open an issue.
+
+Internally, formatting preservation is built on [lossless layouts](Lossless_layout.markdown):
+`printFormatPreserving()` annotates the original AST with layouts (the whitespace, comments and
+tokens of every node, stored as leaf nodes), transfers these layouts to the modified AST using the
+`LayoutTransferVisitor` (which diffs the node lists of both trees), and prints the modified AST
+from its layouts. As a consequence, the original AST passed to `printFormatPreserving()` is
+annotated in place: its node arrays contain leaf nodes afterwards.
+
+If you keep the annotated AST around and modify it directly, you do not need the cloning step or
+the original tokens at all: modify the tree (including its whitespace leaves) and print it with the
+`PrettyPrinter\Lossless` printer, as described in the lossless layout documentation.

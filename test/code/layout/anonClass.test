@@ -1,0 +1,36 @@
+Anonymous classes
+-----
+<?php
+$o = new class($a, $b) extends B {
+    public function m() {}
+};
+-----
+$stmts[1]->expr->expr->args[] = new Node\Arg(new Expr\Variable('c'));
+$stmts[1]->expr->expr->class->extends = new Node\Name('C');
+$stmts[1]->expr->expr->class->stmts[] = new Stmt\Property(Modifiers::PUBLIC, [new Node\PropertyItem('p')]);
+-----
+<?php
+$o = new class($a, $b, $c) extends C {
+    public function m() {}
+    public $p;
+};
+-----
+<?php
+$o = new class {};
+-----
+// Modifiers of the class declaration are inserted into the layout.
+$stmts[1]->expr->expr->class->flags = Modifiers::READONLY;
+-----
+<?php
+$o = new readonly class {};
+-----
+<?php
+$o = new class {};
+-----
+// Changing something the layout cannot express falls back to the pretty printer.
+$stmts[1]->expr->expr->class->setAttribute('kind', 42);
+-----
+<?php
+$o = new class
+{
+};

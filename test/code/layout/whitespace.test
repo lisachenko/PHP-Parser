@@ -1,0 +1,113 @@
+Editing whitespace leaves
+-----
+<?php
+
+function foo($a)
+{
+    return $a;
+}
+-----
+// Move the opening brace onto the function line by editing the whitespace leaf.
+$layout = Layout::of($stmts[2]);
+foreach ($layout->children as $child) {
+    if ($child instanceof Leaf\Whitespace && $child->hasNewline()) {
+        $child->text = ' ';
+        break;
+    }
+}
+-----
+<?php
+
+function foo($a) {
+    return $a;
+}
+-----
+<?php
+foo();
+bar();
+baz();
+-----
+// Remove bar() together with the whitespace in front of it.
+array_splice($stmts, 2, 2);
+-----
+<?php
+foo();
+baz();
+-----
+<?php
+function foo($a)
+{
+    return $a;
+}
+-----
+// Insert a statement including its indentation.
+array_splice($stmts[1]->stmts, 0, 0, [
+    new Stmt\Expression(new Expr\FuncCall(new Node\Name('bar'))),
+    new Leaf\Whitespace("\n    "),
+]);
+-----
+<?php
+function foo($a)
+{
+    bar();
+    return $a;
+}
+-----
+<?php
+function foo($a)
+{
+    return $a;
+}
+-----
+// Statements appended without leaves get a newline and the indentation of the previous statement.
+$stmts[1]->stmts[] = new Stmt\Expression(new Expr\FuncCall(new Node\Name('bar')));
+$stmts[1]->stmts[] = new Stmt\Expression(new Expr\FuncCall(new Node\Name('baz')));
+-----
+<?php
+function foo($a)
+{
+    return $a;
+    bar();
+    baz();
+}
+-----
+<?php
+foo();
+-----
+// Top-level statements appended without leaves are placed on a new line.
+$stmts[] = new Stmt\Expression(new Expr\FuncCall(new Node\Name('bar')));
+-----
+<?php
+foo();
+bar();
+-----
+<?php
+class A
+{
+	function f()
+	{
+		if ($x) {
+			foo();
+		}
+	}
+}
+-----
+// The indentation level of nested fallback output is derived from the surrounding text (a tab
+// counts as four columns), but printed using the indent option of the printer (spaces by default).
+$stmts[1]->stmts[0]->stmts[0]->stmts[] = new Stmt\If_(new Expr\Variable('y'), [
+    'stmts' => [new Stmt\Expression(new Expr\FuncCall(new Node\Name('bar')))],
+]);
+-----
+<?php
+class A
+{
+	function f()
+	{
+		if ($x) {
+			foo();
+            if ($y) {
+                bar();
+            }
+		}
+	}
+}

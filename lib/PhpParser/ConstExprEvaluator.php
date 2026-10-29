@@ -2,6 +2,7 @@
 
 namespace PhpParser;
 
+use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Scalar;
 
@@ -149,6 +150,9 @@ class ConstExprEvaluator {
     private function evaluateArray(Expr\Array_ $expr): array {
         $array = [];
         foreach ($expr->items as $item) {
+            if ($item instanceof Node\Leaf) {
+                continue;
+            }
             if (null !== $item->key) {
                 $array[$this->evaluate($item->key)] = $this->evaluate($item->value);
             } elseif ($item->unpack) {

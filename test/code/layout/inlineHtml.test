@@ -1,0 +1,15 @@
+Inline HTML and PHP tags
+-----
+Hello <?php echo $name ?> world!
+<?php
+foo();
+?>
+Bye
+-----
+$stmts[2]->exprs[0] = new Expr\Variable('other');
+-----
+Hello <?php echo $other ?> world!
+<?php
+foo();
+?>
+Bye

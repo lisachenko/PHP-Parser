@@ -2,6 +2,8 @@
 
 namespace PhpParser;
 
+use PhpParser\Layout\SubNodeRef;
+
 class JsonDecoder {
     /** @var \ReflectionClass<Node>[] Node type to reflection class map */
     private array $reflectionClassCache;
@@ -25,6 +27,12 @@ class JsonDecoder {
             if (isset($value['nodeType'])) {
                 if ($value['nodeType'] === 'Comment' || $value['nodeType'] === 'Comment_Doc') {
                     return $this->decodeComment($value);
+                }
+                if ($value['nodeType'] === 'Layout') {
+                    return $this->decodeLayout($value);
+                }
+                if ($value['nodeType'] === 'SubNodeRef') {
+                    return $this->decodeSubNodeRef($value);
                 }
                 return $this->decodeNode($value);
             }
@@ -80,6 +88,28 @@ class JsonDecoder {
             $value['line'] ?? -1, $value['filePos'] ?? -1, $value['tokenPos'] ?? -1,
             $value['endLine'] ?? -1, $value['endFilePos'] ?? -1, $value['endTokenPos'] ?? -1
         );
+    }
+
+    private function decodeLayout(array $value): Layout {
+        if (!isset($value['children']) || !\is_array($value['children'])) {
+            throw new \RuntimeException('Layout must have children');
+        }
+        $snapshot = $value['snapshot'] ?? [];
+        if (!\is_array($snapshot)) {
+            throw new \RuntimeException('Layout snapshot must be an array');
+        }
+        $indentation = $value['indentation'] ?? '';
+        if (!\is_string($indentation)) {
+            throw new \RuntimeException('Layout indentation must be a string');
+        }
+        return new Layout($this->decodeArray($value['children']), $snapshot, $indentation);
+    }
+
+    private function decodeSubNodeRef(array $value): SubNodeRef {
+        if (!isset($value['path']) || !\is_array($value['path'])) {
+            throw new \RuntimeException('SubNodeRef must have a path');
+        }
+        return new SubNodeRef(...$value['path']);
     }
 
     /** @return \ReflectionClass<Node> */
